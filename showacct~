@@ -35,34 +35,28 @@ if [ ! -z "$showq"  ]; then
 	exit 1
 elif [ `hostname|grep smic|wc -l` == 0 ];then	
 	showquota $user |awk '{if  (/^$/) exit; else print}'
-elif [ `hostname|grep smic|wc -l` == 1 ]; then	# smic shares the same storage on /project /work
+elif [ `hostname|grep smic|wc -l` == 1 ]; then
 	showquota $user |awk '{if ((/project/) || (/^$/)) exit; else print}'
-	exist=$(cat /home/admin/diskscan/report.project |grep $user) 
-	if [ ! -z "$exist" ]; then
-		quota=$(cat /home/admin/diskscan/report.project |grep $user |awk '{print $7}')
-		if [ $quota -gt 0 ]; then
-			a=$(showquota $user |grep project|awk '{print $1}')
-	      	  b=$(showquota $user |grep project|awk '{print $2}')
-        		d=$(showquota $user |grep project|awk '{print $4}')
-	      	  e=$(showquota $user |grep project|awk '{print $5}')
-			echo $a $b $d $d $e|awk -v var=$quota '{printf("%13s\t%10s\t%6s\t%10s\t%s\n" ), $1, $2, var*1000, $4, $5}'	
-		fi
+	quota=$(cat /home/admin/diskscan/report.project |grep $user|awk '{print $7}')
+	if [ $quota -gt 0 ]; then
+		a=$(showquota $user |grep project|awk '{print $1}')
+	        b=$(showquota $user |grep project|awk '{print $2}')
+        	d=$(showquota $user |grep project|awk '{print $4}')
+	        e=$(showquota $user |grep project|awk '{print $5}')
+		echo $a $b $d $d $e|awk -v var=$quota '{printf("%13s\t%10s\t%6s\t%10s\t%s\n" ), $1, $2, var*1000, $4, $5}'	
 	fi
 fi
 
 echo ""
 showquota $user |grep "home"|awk '{print "/home has used "$2"M from "$3"M (quota), which contains "$4" files"}'
 if [  `hostname|grep smic|wc -l` == 1 ]; then
-	exist=$(cat /home/admin/diskscan/report.project |grep $user) 	
-	if [ ! -z "$exist" ]; then
-		quota=$(cat /home/admin/diskscan/report.project |grep $user|awk '{print $7}')
-		if [ $quota -gt 0 ]; then
-			showquota $user |grep "project"|awk -v var="$quota" '{print "/project+/work, which contain "$4" files, have used "$2"M from "var"GB (/project)"}'
-		fi
-		else 
-		showquota $user |grep "project"|awk '{print "/project has used "$2"M from "$3"MB (quota), which contains "$4" files"}'
-		fi
+	quota=$(cat /home/admin/diskscan/report.project |grep $user|awk '{print $7}')
+   	if [ $quota -gt 0 ]; then
+	showquota $user |grep "project"|awk -v var="$quota" '{print "/project+/work, which contain "$4" files, have used "$2"M from "var"GB (/project)"}'
 	fi
+else 
+	showquota $user |grep "project"|awk '{print "/project has used "$2"M from "$3"MB (quota), which contains "$4" files"}'
+fi
 
 
 echo ""
@@ -96,27 +90,14 @@ fi
 q_deny="/home/admin/etc/qsub.deny"
 if [ -e $q_deny ]; then
         qsub=$(grep $user $q_deny)
-        if [[ ! -z "$qsub" ]] ; then       #not found     && [[ "${qsub:0:1}" != "#" ]]; then
-		ct=$(echo $qsub|awk '{print NF}')
-		if [ "$ct" > 1 ]; then		# e.g. mforoo1 work #mforoo1 bigmem mforoo1 bigmemtb
-
-			for (( i =2; i <=$ct; i+=2 )); 
-			do 
-				j=$(echo $i-1|bc)				
-				queue=$(echo $qsub|awk -v var="$i" '{print $var}'); 
-				name=$(echo $qsub|awk -v var="$j" '{print $var}'); 
-				if [[ ! -z "$queue" ]] && [[ "${name:0:1}" != "#" ]]; then
-                        	echo Submitting jobs to the \"$queue\" queue is blocked
-      			fi
-			done
-
-       	elif [ "${qsub:0:1}" == "#" ]; then
-			echo "Jobs can be submitted to all the available queues"   # e.g. #privero
-		else echo "You are blocked to all the queuee on this cluster!"	# e.g. privero
-		fi
-
-	   else  echo "Jobs can be submitted to all the available queues" 
-         fi
+        if [[ ! -z "$qsub" ]] && [[ "${qsub:0:1}" != "#" ]]; then
+                queue=$(echo $qsub|awk '{print $2}')
+                if [ ! -z "$queue" ]; then
+                        echo Submitting jobs to the \"$queue\" queue is blocked
+                else echo "Submitting any jobs on this cluster is blocked"
+                fi
+	else  echo "Jobs can be submitted to all the available queues" 
+        fi
 else  echo "Jobs can be submitted to all the available queues" 
 fi
 
