@@ -1,0 +1,44 @@
+#!/bin/sh
+
+uid=$1
+mail=$2
+
+if (( "$#" != 2 )); then
+	echo $'\n' Usage: $0 uid email$'\n'
+	exit 1
+fi
+
+rm -f *.out
+for i in mike5 smic4 philip qb4
+do
+	mkdir -p $i
+	cd $i
+	if [ -e $i-qsub.deny ]; then sort $i-qsub.deny > $i-qsub.deny-old; fi
+	if [ -e $i-user.deny ]; then sort $i-user.deny > $i-user.deny-old; fi
+	if [ -e $i-mdiag.log ]; then sort $i-mdiag.log > $i-mdiag.log-old; fi
+
+	if [ $i == "qb4" ]; then
+		machine=$i.loni.org
+	else  machine=$i.hpc.lsu.edu
+	fi
+	ssh $uid@$machine "echo mdiag.log>t; mdiag -u |grep MAX>>t; echo user.deny>>t; cat /home/admin/etc/user.deny>>t; if [ -e /home/admin/etc/qsub.deny ]; then echo qsub.deny >>t; cat /home/admin/etc/qsub.deny>>t; fi ; cat t " >dump
+	
+	awk '/mdiag.log/ {flag=1;next} /user.deny/ {flag=0} flag {print}' dump |sort > $i-mdiag.log 
+	awk '/user.deny/ {flag=1;next} /qsub.deny/ {flag=0} flag {print}' dump |sort > $i-user.deny
+	awk '/qsub.deny/ {flag=1;next} /^$/ {flag=0} flag {print}' dump |sort > $i-qsub.deny
+	
+	rm dump
+	if [[ -e $i-qsub.deny-old && ! -z `diff $i-qsub.deny $i-qsub.deny-old` ]]; then diff $i-qsub.deny $i-qsub.deny-old > ../$i-qsub.out; fi
+	if [[ -e $i-user.deny-old && ! -z `diff $i-user.deny $i-user.deny-old` ]]; then diff $i-user.deny $i-user.deny-old > ../$i-user.out; fi
+	if [[ -e $i-mdiag.log-old && ! -z `diff $i-mdiag.log $i-mdiag.log-old` ]]; then diff $i-mdiag.log $i-mdiag.log-old > ../$i-mdiag.out; fi
+	cd ../
+	
+	if [[ -e $i-qsub.out  ||  -e $i-user.out  || -e $i-mdiag.out ]]; then
+		echo "There are some changes on $i, please pay attention! "
+		echo "There are some changes on $i, please pay attention! " | mail -s "USER Restriction ALERT" $mail 
+	else
+		echo "There are no changes on $i! "
+	fi
+done
+echo "You are done! " $'\n'
+
