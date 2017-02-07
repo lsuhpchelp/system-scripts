@@ -1,2 +1,2 @@
 # system-scripts 
-Scripts used to assist user services
+Scripts written to assist user services
