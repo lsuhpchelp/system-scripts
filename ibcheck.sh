@@ -1,11 +1,10 @@
 #!/bin/bash
 
 # Author: Le Yan @ LSU
-# v0.2: Feb 2, 2017
+# v1.0: Feb 8, 2017
 
 # To do:
-# 1. Add the latency test;
-# 2. Detect the "bad" pair automatically;
+# 1. Detect the "bad" pair automatically;
 
 # Known issues:
 
@@ -64,7 +63,7 @@ name=
 
 datafile="test.dat"
 bw_expect="3700"
-lat_expect=
+lat_expect="1.0"
 sleep_len="1"
 
 # Process command line arguments.
@@ -207,12 +206,12 @@ fi
 
 if [ $ttype == "both" ]
 then
-  header="node1 node2 bw lat"
+  header="node1 node2 bandwidth latency"
 elif [ $ttype == "bw" ]
 then 
-  header="node1 node2 bw"
+  header="node1 node2 bandwidth"
 else
-  header="node1 node2 lat"
+  header="node1 node2 latency"
 fi
 echo $header > $datafile
 
@@ -221,13 +220,14 @@ echo $header > $datafile
 # Test bandwidth.
 for host1 in $list
 do
-  #row="$host1"
   >&2 echo "Testing $host1..."
   for host2 in $list
   do
+
     if [[ $host1 != $host2 ]]
     then
-      #echo "Testing $host1 and $host2..."
+
+      # Bandwidth test. Report the average bandwidth.
       if [ $ttype == "both" -o $ttype == "bw" ]
       then 
 	# Start the server on host1.
@@ -241,13 +241,45 @@ do
 	# Start on host2.
         bw=`ssh -n $host2 "ib_read_bw $host1" | tail -2 | head -1 | awk '{print $4}' &`
         wait
-        #echo "Bandwidth: $bw MB/s"
-        #row=$row",$bw"
-        echo "$host1 $host2 $bw"
       fi
+
+      # Latency test. Report the typical latency.
+      if [ $ttype == "both" -o $ttype == "lat" ]
+      then
+        # Start the server on host1.
+        ssh -n $host1 "ib_read_lat" > /dev/null &
+        # Make sure the server is successfully started. If not, wait a bit.
+        ssh -n $host1 "ps aux | grep ib_read_lat | grep -v grep" > /dev/null
+        if [[ $? != 0 ]]
+        then
+          sleep $sleep_len
+        fi
+        # Start on host2.
+        lat=`ssh -n $host2 "ib_read_lat $host1" | tail -2 | head -1 | awk '{print $5}' &`
+        wait
+      fi
+
+      dest=$host2
+
     else
-      echo "$host1 $host1 $bw_expect"
+
+      bw=$bw_expect
+      lat=$lat_expect
+      dest=$host1
+
     fi
+
+    # Write output.
+    if [[ $ttype == "both" ]]
+    then
+      echo "$host1 $dest $bw $lat"
+    elif [[ $ttype == "bw" ]]
+    then
+      echo "$host1 $dest $bw"
+    else
+      echo "$host1 $dest $lat"
+    fi
+
   done
 #  echo $row
 done >> $datafile
@@ -255,13 +287,30 @@ done >> $datafile
 # Create a R script to generate the heatmap.
 cat >$rscript << HERE
 library(ggplot2)
-bw <- read.table(file="$datafile",header=TRUE)
-g <- ggplot(bw,aes(x=node1,y=node2,fill=bw)) + geom_tile()
-g <- g + theme(axis.text.x = element_text(angle=90))
-png(file="$map_bw")
-print(g)
-dev.off()
+df <- read.table(file="$datafile",header=TRUE)
 HERE
+
+if [ $ttype == "both" -o $ttype == "bw" ]
+then
+  cat >>$rscript << HERE
+  g <- ggplot(df,aes(x=node1,y=node2,fill=bandwidth)) + geom_tile()
+  g <- g + theme(axis.text.x = element_text(angle=90))
+  png(file="$map_bw")
+  print(g)
+  dev.off()
+HERE
+fi
+
+if [ $ttype == "both" -o $ttype == "lat" ]
+then
+  cat >>$rscript << HERE
+  g <- ggplot(df,aes(x=node1,y=node2,fill=latency)) + geom_tile()
+  g <- g + theme(axis.text.x = element_text(angle=90))
+  png(file="$map_lat")
+  print(g)
+  dev.off()
+HERE
+fi
 
 # Run the R script.
 if [[ verbose == 0 ]] 
