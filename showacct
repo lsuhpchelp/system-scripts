@@ -139,6 +139,10 @@ if [ -e $cpu_deny ]; then
                 fi        
 	fi
 fi
+#check login shell
+if [ ! -z `finger $user|grep Shell|awk '{print $4}'|grep nologin` ]; then
+        echo "Login shell is set to nologin, user account is blocked"
+fi
 
 if [ $verbose == "true" ]; then
 	echo $'\n'----Please contact sys-help@loni.org for any questions---- $'\n'
