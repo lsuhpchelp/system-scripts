@@ -139,7 +139,7 @@ if [ -e $cpu_deny ]; then
                 fi        
 	fi
 fi
-#check login shell
+#check LOGIN SHELL
 if [ ! -z `finger $user|grep Shell|awk '{print $4}'|grep nologin` ]; then
         echo "Login shell is set to nologin, user account is blocked"
 fi
