@@ -1,4 +1,8 @@
 #!/bin/sh
+#showacct- display user account information
+#Written by Wei Feinstein 9/2016
+#Version 2.1
+
 input=$1
 verbose=false
 
