@@ -1,4 +1,7 @@
 #!/bin/sh
+# user-restriction-alert - check any changes in terms of user account restriction.
+# Written by Wei Feinstein  2/2017
+# Version 2.2
 
 uid=$1
 mail=$2
