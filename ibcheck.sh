@@ -161,8 +161,14 @@ map_lat=$name"_map_lat.png"
 # If a subset of nodes are to be tested, either a node range or
 # a host file can be supplied.
 
-# All nodes that are report by Moab as "online".
-mlist=`mdiag -n -v | grep -vi drained | awk '{print $1}' | head -n -4 | tail -n +4`
+# Check if "mdiag" is available.
+# If yes, then only check those nodes that are report by Moab as "online".
+if [ -x "$(command -v mdiag)" ] 
+then
+  mlist=`mdiag -n -v | grep -vi drained | awk '{print $1}' | head -n -4 | tail -n +4`
+else
+  mlist=
+fi
 templist=
 list=
 
@@ -180,15 +186,19 @@ else
   exit
 fi
 
-# Generate the list of online nodes reported by Moab.
-
-for host in `echo $templist`
-do
-  if [[ $mlist =~ .*$host.* ]]
-  then
-    list="$list $host"
-  fi
-done
+# Generate the list of nodes to be tested.
+if [[ -n $mlist ]]
+then
+  for host in `echo $templist`
+  do
+    if [[ $mlist =~ .*$host.* ]]
+    then
+      list="$list $host"
+    fi
+  done
+else
+  list=$templist
+fi
 
 if [[ -z $list ]]
 then
