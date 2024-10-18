@@ -215,10 +215,9 @@ Getpasswd(){
                 echo Type password to access LDAP, followed by return
 		read -es ldappasswd
                 if [[ $category == "hpc" ]]; then
-                        results=$(ldapsearch -LLL -ZZ -x -h ldap01.hpc.lsu.edu  -D uid=$admid,ou=Admins,ou=People,dc=hpc,dc=lsu,dc=edu -w "$ldappasswd" -b dc=hpc,dc=lsu,dc=edu "uid=$admid"  2>&1)
+                        results=$(ldapsearch -LLL -x -H ldaps://ldap01.hpc.lsu.edu  -D uid=$admid,ou=Admins,ou=People,dc=hpc,dc=lsu,dc=edu -w "$ldappasswd" -b dc=hpc,dc=lsu,dc=edu "uid=$admid"  2>&1)
                 else
-                        #results=$(ldapsearch -LLL -ZZ -x -h ldap01.sys.loni.org  -D uid=$admid,ou=People,ou=Admins,dc=loni,dc=org -W -b dc=loni,dc=org "uid=$uid" 2>&1)
-                        results=$(ldapsearch -LLL -ZZ -x -h lonildap01.hpc.lsu.edu  -D uid=$admid,ou=People,ou=Admins,dc=loni,dc=org -w "$ldappasswd" -b dc=loni,dc=org "uid=$admid" 2>&1)
+                        results=$(ldapsearch -LLL -x -H ldaps://lonildap01.hpc.lsu.edu  -D uid=$admid,ou=People,ou=Admins,dc=loni,dc=org -w "$ldappasswd" -b dc=loni,dc=org "uid=$admid" 2>&1)
                 fi
                 index=$(echo $index-1|bc)
         done
@@ -238,7 +237,7 @@ Check(){
         exclude_list=$(echo ${exclude_arr[@]})
         if [[ `echo $exclude_list |grep -w $uid` && "$action" == "disable" ]]; then
 		echo $uid is in the allocation committee, abort! $'\n'
-		Stop	
+		Stop
 	fi
 	
 	index=3
@@ -248,9 +247,9 @@ Check(){
     	do
 #        	echo Type password to access LDAP, followed by return
         	if [[ $category == "hpc" ]]; then
-                	results=$(ldapsearch -LLL -ZZ -x -h ldap01.hpc.lsu.edu  -D uid=$admid,ou=Admins,ou=People,dc=hpc,dc=lsu,dc=edu -w "$ldappasswd" -b dc=hpc,dc=lsu,dc=edu "uid=$uid"  2>&1)
+                	results=$(ldapsearch -LLL -x -H ldaps://ldap01.hpc.lsu.edu  -D uid=$admid,ou=Admins,ou=People,dc=hpc,dc=lsu,dc=edu -w "$ldappasswd" -b dc=hpc,dc=lsu,dc=edu "uid=$uid"  2>&1)
        		else
-                	results=$(ldapsearch -LLL -ZZ -x -h lonildap01.hpc.lsu.edu  -D uid=$admid,ou=People,ou=Admins,dc=loni,dc=org -w "$ldappasswd" -b dc=loni,dc=org "uid=$uid" 2>&1)
+                	results=$(ldapsearch -LLL -x -H ldaps://lonildap01.hpc.lsu.edu  -D uid=$admid,ou=People,ou=Admins,dc=loni,dc=org -w "$ldappasswd" -b dc=loni,dc=org "uid=$uid" 2>&1)
         	fi
         	index=$(echo $index-1|bc)
     	done
@@ -316,9 +315,9 @@ fi
 fi
 
 if [[ $category == "hpc" ]]; then
-  log=$(echo -e $ldif | ldapmodify -ZZ -h ldap01.hpc.lsu.edu  -w "$ldappasswd" -x -D uid=$admid,ou=Admins,ou=People,dc=hpc,dc=lsu,dc=edu 2>&1)
+  log=$(echo -e $ldif | ldapmodify -H ldaps://ldap01.hpc.lsu.edu  -w "$ldappasswd" -x -D uid=$admid,ou=Admins,ou=People,dc=hpc,dc=lsu,dc=edu 2>&1)
 else
-  log=$(echo -e $ldif | ldapmodify -ZZ -h lonildap01.hpc.lsu.edu -w "$ldappasswd" -x -D uid=$admid,ou=People,ou=Admins,dc=loni,dc=org 2>&1)
+  log=$(echo -e $ldif | ldapmodify -H ldaps://lonildap01.hpc.lsu.edu -w "$ldappasswd" -x -D uid=$admid,ou=People,ou=Admins,dc=loni,dc=org 2>&1)
 fi
 
 #check if sucessful
